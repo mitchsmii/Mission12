@@ -1,41 +1,35 @@
 import { useEffect, useState } from 'react';
+import type { Book } from '../types/Book';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
-interface Book {
-  bookID: number;
-  title: string;
-  author: string;
-  publisher: string;
-  isbn: string;
-  classification: string;
-  category: string;
-  pageCount: number;
-  price: number;
-}
-
-interface BooksResponse {
-  totalCount: number;
-  page: number;
-  pageSize: number;
-  books: Book[];
-}
-
-function BookList() {
+function BookList({ selectedCategories }: { selectedCategories: string[] }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [searchParams] = useSearchParams();
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+  const [pageSize, setPageSize] = useState(Number(searchParams.get('pageSize')) || 5);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   useEffect(() => {
-    fetch(
-      `http://localhost:5000/api/books?page=${page}&pageSize=${pageSize}&sortOrder=${sortOrder}`
-    )
-      .then((res) => res.json())
-      .then((data: BooksResponse) => {
-        setBooks(data.books);
-        setTotalCount(data.totalCount);
-      });
-  }, [page, pageSize, sortOrder]);
+    const fetchBooks = async () => {
+      setLoading(true);
+      const categoryParams = selectedCategories
+        .map((category) => `categories=${encodeURIComponent(category)}`)
+        .join('&');
+      const response = await fetch(
+        `https://localhost:5001/Books/AllBooks?pageSize=${pageSize}&pageNum=${page}${selectedCategories.length ? `&${categoryParams}` : ''}`,
+      );
+      const data = await response.json();
+      setBooks(data.books);
+      setTotalCount(data.totalNumBooks);
+      setLoading(false);
+    };
+    fetchBooks();
+  }, [page, pageSize, sortOrder, selectedCategories]);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -49,15 +43,35 @@ function BookList() {
     setPage(1);
   };
 
-  return (
-    <div className="container mt-4">
-      <h1 className="mb-4">Bookstore</h1>
+  const handleAddToCart = (book: Book) => {
+    addToCart({
+      bookID: book.bookID,
+      title: book.title,
+      price: book.price,
+      quantity: 1,
+    });
+    navigate(`/cart?returnPage=${page}&returnPageSize=${pageSize}`);
+  };
 
-      <div className="d-flex align-items-center gap-3 mb-3">
-        <div>
-          <label className="me-2">Results per page:</label>
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center mt-5">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <span className="text-muted">Showing {totalCount} books</span>
+        <div className="d-flex align-items-center gap-2">
+          <label className="form-label mb-0">Per page:</label>
           <select
-            className="form-select d-inline-block w-auto"
+            className="form-select form-select-sm"
+            style={{ width: 'auto' }}
             value={pageSize}
             onChange={handlePageSizeChange}
           >
@@ -66,46 +80,53 @@ function BookList() {
             <option value={25}>25</option>
           </select>
         </div>
-        <div>
-          <span className="me-2">Showing {totalCount} books</span>
+      </div>
+
+      <div className="card">
+        <div className="table-responsive">
+          <table className="table table-striped table-hover mb-0">
+            <thead className="table-dark">
+              <tr>
+                <th role="button" onClick={toggleSort}>
+                  Title {sortOrder === 'asc' ? '▲' : '▼'}
+                </th>
+                <th>Author</th>
+                <th>Publisher</th>
+                <th>ISBN</th>
+                <th>Classification</th>
+                <th>Category</th>
+                <th>Pages</th>
+                <th>Price</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {books.map((book) => (
+                <tr key={book.bookID}>
+                  <td>{book.title}</td>
+                  <td>{book.author}</td>
+                  <td>{book.publisher}</td>
+                  <td>{book.isbn}</td>
+                  <td>{book.classification}</td>
+                  <td>{book.category}</td>
+                  <td>{book.pageCount}</td>
+                  <td>${book.price.toFixed(2)}</td>
+                  <td>
+                    <button
+                      className="btn btn-success btn-sm"
+                      onClick={() => handleAddToCart(book)}
+                    >
+                      Add to Cart
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <table className="table table-striped table-bordered">
-        <thead className="table-dark">
-          <tr>
-            <th
-              style={{ cursor: 'pointer' }}
-              onClick={toggleSort}
-            >
-              Title {sortOrder === 'asc' ? '▲' : '▼'}
-            </th>
-            <th>Author</th>
-            <th>Publisher</th>
-            <th>ISBN</th>
-            <th>Classification</th>
-            <th>Category</th>
-            <th>Pages</th>
-            <th>Price</th>
-          </tr>
-        </thead>
-        <tbody>
-          {books.map((book) => (
-            <tr key={book.bookID}>
-              <td>{book.title}</td>
-              <td>{book.author}</td>
-              <td>{book.publisher}</td>
-              <td>{book.isbn}</td>
-              <td>{book.classification}</td>
-              <td>{book.category}</td>
-              <td>{book.pageCount}</td>
-              <td>${book.price.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <nav>
+      <nav className="mt-3 d-flex justify-content-center">
         <ul className="pagination">
           <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
             <button className="page-link" onClick={() => setPage(page - 1)}>
@@ -126,7 +147,7 @@ function BookList() {
           </li>
         </ul>
       </nav>
-    </div>
+    </>
   );
 }
 

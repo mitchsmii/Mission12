@@ -1,0 +1,32 @@
+.category-filter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-family: Arial, sans-serif;
+}
+
+.category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-checkbox {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.welcome-band {
+  background-color: #007bff;
+  color: white;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+}
