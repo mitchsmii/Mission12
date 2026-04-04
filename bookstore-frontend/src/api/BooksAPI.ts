@@ -5,7 +5,7 @@ interface FetchBooksResponse {
   totalNumBooks: number;
 }
 
-const BASE_URL = 'https://localhost:5001/Books';
+const BASE_URL = 'https://is413bookstore-g6bxg3cfengfgjc5.centralus-01.azurewebsites.net/Books';
 
 export const fetchBooks = async (
   pageSize: number,

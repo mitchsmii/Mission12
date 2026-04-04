@@ -1,0 +1,20 @@
+# .NET build artifacts
+bin/
+obj/
+publish/
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.idea/
+.vs/
+*.user
+
+# Azure
+.azure/
+
+# SQLite WAL/SHM files
+*.sqlite-shm
+*.sqlite-wal
