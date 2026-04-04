@@ -40,11 +40,6 @@ function BookList({ selectedCategories }: { selectedCategories: string[] }) {
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setPageSize(Number(e.target.value));
-    setPage(1);
-  };
-
   const toggleSort = () => {
     setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     setPage(1);
