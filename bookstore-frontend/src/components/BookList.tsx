@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import type { Book } from '../types/Book';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { fetchBooks } from '../api/BooksAPI';
+import Pagination from './Pagination';
 
 function BookList({ selectedCategories }: { selectedCategories: string[] }) {
   const [books, setBooks] = useState<Book[]>([]);
@@ -13,23 +15,28 @@ function BookList({ selectedCategories }: { selectedCategories: string[] }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBooks = async () => {
-      setLoading(true);
-      const categoryParams = selectedCategories
-        .map((category) => `categories=${encodeURIComponent(category)}`)
-        .join('&');
-      const response = await fetch(
-        `https://localhost:5001/Books/AllBooks?pageSize=${pageSize}&pageNum=${page}${selectedCategories.length ? `&${categoryParams}` : ''}`,
-      );
-      const data = await response.json();
-      setBooks(data.books);
-      setTotalCount(data.totalNumBooks);
-      setLoading(false);
+    const loadBooks = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchBooks(pageSize, page, selectedCategories);
+
+        setBooks(data.books);
+        setTotalCount(data.totalNumBooks);
+      } catch (error) {
+        setError((error as Error).message);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchBooks();
+
+    loadBooks();
   }, [page, pageSize, sortOrder, selectedCategories]);
+
+  if (loading) return <p>Loading projects...</p>;
+  if (error) return <p className="text-red-500">Error : {error}</p>;
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -67,19 +74,6 @@ function BookList({ selectedCategories }: { selectedCategories: string[] }) {
     <>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <span className="text-muted">Showing {totalCount} books</span>
-        <div className="d-flex align-items-center gap-2">
-          <label className="form-label mb-0">Per page:</label>
-          <select
-            className="form-select form-select-sm"
-            style={{ width: 'auto' }}
-            value={pageSize}
-            onChange={handlePageSizeChange}
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-          </select>
-        </div>
       </div>
 
       <div className="card">
@@ -126,27 +120,7 @@ function BookList({ selectedCategories }: { selectedCategories: string[] }) {
         </div>
       </div>
 
-      <nav className="mt-3 d-flex justify-content-center">
-        <ul className="pagination">
-          <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => setPage(page - 1)}>
-              Previous
-            </button>
-          </li>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <li key={p} className={`page-item ${p === page ? 'active' : ''}`}>
-              <button className="page-link" onClick={() => setPage(p)}>
-                {p}
-              </button>
-            </li>
-          ))}
-          <li className={`page-item ${page === totalPages ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => setPage(page + 1)}>
-              Next
-            </button>
-          </li>
-        </ul>
-      </nav>
+      <Pagination page={page} totalPages={totalPages} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} />
     </>
   );
 }
